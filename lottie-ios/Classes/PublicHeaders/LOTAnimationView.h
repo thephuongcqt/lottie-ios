@@ -35,7 +35,8 @@ typedef void (^LOTAnimationCompletionBlock)(BOOL animationFinished);
 - (nonnull instancetype)initWithModel:(nullable LOTComposition *)model inBundle:(nullable NSBundle *)bundle;
 
 /// Loads animation asynchronously from the specified URL
-- (nonnull instancetype)initWithContentsOfURL:(nonnull NSURL *)url;
+//- (nonnull instancetype)initWithContentsOfURL:(nonnull NSURL *)url;
+- (nonnull instancetype)initWithContentsOfURL:(nonnull NSURL *)url withBlock: (void (^)(LOTAnimationView *view, NSError *error)) completion;
 
 /// Set animation name from Interface Builder
 @property (nonatomic, strong) IBInspectable NSString * _Nullable animation;
@@ -248,5 +249,4 @@ typedef void (^LOTAnimationCompletionBlock)(BOOL animationFinished);
  */
 - (CGRect)convertRect:(CGRect)rect
          toLayerNamed:(NSString *_Nullable)layerName __deprecated;
-
 @end

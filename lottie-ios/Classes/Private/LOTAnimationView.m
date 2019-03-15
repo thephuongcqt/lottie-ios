@@ -56,38 +56,45 @@ static NSString * const kCompContainerAnimationKey = @"play";
 
 # pragma mark - Initializers
 
-- (instancetype)initWithContentsOfURL:(NSURL *)url {
-  self = [self initWithFrame:CGRectZero];
-  if (self) {
-    LOTComposition *laScene = [[LOTAnimationCache sharedCache] animationForKey:url.absoluteString];
-    if (laScene) {
-      laScene.cacheKey = url.absoluteString;
-      [self _initializeAnimationContainer];
-      [self _setupWithSceneModel:laScene];
-    } else {
-      dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void) {
-        NSData *animationData = [NSData dataWithContentsOfURL:url];
-        if (!animationData) {
-          return;
-        }
-        NSError *error;
-        NSDictionary  *animationJSON = [NSJSONSerialization JSONObjectWithData:animationData
-                                                                       options:0 error:&error];
-        if (error || !animationJSON) {
-          return;
-        }
-        
-        LOTComposition *laScene = [[LOTComposition alloc] initWithJSON:animationJSON withAssetBundle:[NSBundle mainBundle]];
-        dispatch_async(dispatch_get_main_queue(), ^(void) {
-          [[LOTAnimationCache sharedCache] addAnimation:laScene forKey:url.absoluteString];
-          laScene.cacheKey = url.absoluteString;
-          [self _initializeAnimationContainer];
-          [self _setupWithSceneModel:laScene];
-        });
-      });
+- (instancetype)initWithContentsOfURL:(NSURL *)url withBlock: (void (^)(LOTAnimationView *view, NSError *error)) completion{
+    self = [self initWithFrame:CGRectZero];
+    if (self) {
+        LOTComposition *laScene = [[LOTAnimationCache sharedCache] animationForKey:url.absoluteString];
+        if (laScene) {
+            laScene.cacheKey = url.absoluteString;
+            [self _initializeAnimationContainer];
+            [self _setupWithSceneModel:laScene];
+        } else {
+            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void) {
+                NSData *animationData = [NSData dataWithContentsOfURL:url];
+                if (!animationData) {
+                    NSError *err = [NSError errorWithDomain:@"initWithContentsOfURL" code:999 userInfo:@{NSLocalizedDescriptionKey: @"initWithContentsOfURL"}];
+                    completion(nil, err);
+                    return;
+                }
+                NSError *error;
+                NSDictionary  *animationJSON = [NSJSONSerialization JSONObjectWithData:animationData
+                                                                               options:0 error:&error];
+                if (error || !animationJSON) {
+                    completion(nil, error);
+                    return;
+                }
+                
+                LOTComposition *laScene = [[LOTComposition alloc] initWithJSON:animationJSON withAssetBundle:[NSBundle mainBundle]];
+                dispatch_async(dispatch_get_main_queue(), ^(void) {
+                    [[LOTAnimationCache sharedCache] addAnimation:laScene forKey:url.absoluteString];
+                    laScene.cacheKey = url.absoluteString;
+                    [self _initializeAnimationContainer];
+                    [self _setupWithSceneModel:laScene];
+                });
+            });
+        }        
+        completion(self, nil);
+    } else{
+        NSError *err = [NSError errorWithDomain:@"initWithContentsOfURL" code:999 userInfo:@{NSLocalizedDescriptionKey: @"initWithContentsOfURL"}];
+        completion(nil, err);
     }
-  }
-  return self;
+    return self;
 }
 
 - (instancetype)initWithModel:(LOTComposition *)model inBundle:(NSBundle *)bundle {
