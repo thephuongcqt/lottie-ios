@@ -249,4 +249,5 @@ typedef void (^LOTAnimationCompletionBlock)(BOOL animationFinished);
  */
 - (CGRect)convertRect:(CGRect)rect
          toLayerNamed:(NSString *_Nullable)layerName __deprecated;
+@property (nonatomic, copy, nullable) LOTAnimationCompletionBlock didStartPlayBlock;
 @end

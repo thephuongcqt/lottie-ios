@@ -64,6 +64,7 @@ static NSString * const kCompContainerAnimationKey = @"play";
             laScene.cacheKey = url.absoluteString;
             [self _initializeAnimationContainer];
             [self _setupWithSceneModel:laScene];
+            completion(self, nil);
         } else {
             dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void) {
                 NSData *animationData = [NSData dataWithContentsOfURL:url];
@@ -86,10 +87,10 @@ static NSString * const kCompContainerAnimationKey = @"play";
                     laScene.cacheKey = url.absoluteString;
                     [self _initializeAnimationContainer];
                     [self _setupWithSceneModel:laScene];
+                    completion(self, nil);
                 });
             });
-        }        
-        completion(self, nil);
+        }
     } else{
         NSError *err = [NSError errorWithDomain:@"initWithContentsOfURL" code:999 userInfo:@{NSLocalizedDescriptionKey: @"initWithContentsOfURL"}];
         completion(nil, err);
@@ -432,6 +433,11 @@ static NSString * const kCompContainerAnimationKey = @"play";
     _compContainer.shouldRasterize = NO;
   }
   _isAnimationPlaying = YES;
+    
+    if(_sceneModel != nil && _isAnimationPlaying && _didStartPlayBlock != nil) {
+        _didStartPlayBlock(YES);
+        _didStartPlayBlock = nil;
+    }
 }
 
 #pragma mark - Other Time Controls
