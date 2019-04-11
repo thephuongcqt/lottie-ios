@@ -154,6 +154,8 @@ static NSString * const kCompContainerAnimationKey = @"play";
   _shouldRasterizeWhenIdle = NO;
   [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(_handleWillEnterForeground) name:UIApplicationWillEnterForegroundNotification object:nil];
   [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(_handleWillEnterBackground) name:UIApplicationDidEnterBackgroundNotification object:nil];
+    [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(_handleWillEnterForeground) name:UIApplicationDidBecomeActiveNotification object:nil];
+    [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(_handleWillEnterBackground) name:UIApplicationWillResignActiveNotification object:nil];
 }
 
 #else
