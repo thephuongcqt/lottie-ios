@@ -15,6 +15,7 @@
 #import "LOTCompositionContainer.h"
 
 static NSString * const kCompContainerAnimationKey = @"play";
+typedef void (^CompletionJsonFromURL) (LOTAnimationView *view, NSError *error);
 
 @implementation LOTAnimationView {
   LOTCompositionContainer *_compContainer;
@@ -27,6 +28,7 @@ static NSString * const kCompContainerAnimationKey = @"play";
   // Properties for tracking automatic restoration of animation.
   BOOL _shouldRestoreStateWhenAttachedToWindow;
   LOTAnimationCompletionBlock _completionBlockToRestoreWhenAttachedToWindow;
+    CompletionJsonFromURL _completionJsonFromURL;
 }
 
 # pragma mark - Convenience Initializers
@@ -56,7 +58,7 @@ static NSString * const kCompContainerAnimationKey = @"play";
 
 # pragma mark - Initializers
 
-- (instancetype)initWithContentsOfURL:(NSURL *)url withBlock: (void (^)(LOTAnimationView *view, NSError *error)) completion{
+- (instancetype)initWithContentsOfURL:(NSURL *)url withBlock: (CompletionJsonFromURL) completion{
     self = [self initWithFrame:CGRectZero];
     if (self) {
         LOTComposition *laScene = [[LOTAnimationCache sharedCache] animationForKey:url.absoluteString];
@@ -66,30 +68,47 @@ static NSString * const kCompContainerAnimationKey = @"play";
             [self _setupWithSceneModel:laScene];
             completion(self, nil);
         } else {
+            _completionJsonFromURL = completion;
+            #pragma clang diagnostic push
+            #pragma clang diagnostic ignored "-Wimplicit-retain-self"
             dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void) {
                 NSData *animationData = [NSData dataWithContentsOfURL:url];
+                if (_completionJsonFromURL == nil) {
+                    NSLog(@">> dataWithContentsOfURL: COMPLETION NULL !!");
+                    return;
+                }
+                
                 if (!animationData) {
                     NSError *err = [NSError errorWithDomain:@"initWithContentsOfURL" code:999 userInfo:@{NSLocalizedDescriptionKey: @"initWithContentsOfURL"}];
-                    completion(nil, err);
+                    if (_completionJsonFromURL != nil) {
+                        _completionJsonFromURL(nil, err);
+                        _completionJsonFromURL = nil;
+                    }
                     return;
                 }
                 NSError *error;
                 NSDictionary  *animationJSON = [NSJSONSerialization JSONObjectWithData:animationData
                                                                                options:0 error:&error];
                 if (error || !animationJSON) {
-                    completion(nil, error);
+                    if (_completionJsonFromURL != nil) {
+                        _completionJsonFromURL(nil, error);
+                        _completionJsonFromURL = nil;
+                    }
                     return;
                 }
-                
                 LOTComposition *laScene = [[LOTComposition alloc] initWithJSON:animationJSON withAssetBundle:[NSBundle mainBundle]];
                 dispatch_async(dispatch_get_main_queue(), ^(void) {
                     [[LOTAnimationCache sharedCache] addAnimation:laScene forKey:url.absoluteString];
                     laScene.cacheKey = url.absoluteString;
                     [self _initializeAnimationContainer];
                     [self _setupWithSceneModel:laScene];
-                    completion(self, nil);
+                    if (_completionJsonFromURL != nil) {
+                        _completionJsonFromURL(self, nil);
+                        _completionJsonFromURL = nil;
+                    }
                 });
             });
+            #pragma clang diagnostic pop
         }
     } else{
         NSError *err = [NSError errorWithDomain:@"initWithContentsOfURL" code:999 userInfo:@{NSLocalizedDescriptionKey: @"initWithContentsOfURL"}];
@@ -149,7 +168,7 @@ static NSString * const kCompContainerAnimationKey = @"play";
   _autoReverseAnimation = NO;
   _playRangeEndFrame = nil;
   _playRangeStartFrame = nil;
-  _playRangeEndProgress = 0;
+   _playRangeEndProgress = 0;
   _playRangeStartProgress = 0;
   _shouldRasterizeWhenIdle = NO;
   [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(_handleWillEnterForeground) name:UIApplicationWillEnterForegroundNotification object:nil];
@@ -181,6 +200,7 @@ static NSString * const kCompContainerAnimationKey = @"play";
 
 
 - (void)dealloc {
+    _completionJsonFromURL = nil;
   [NSNotificationCenter.defaultCenter removeObserver:self];
 }
 
@@ -273,6 +293,7 @@ static NSString * const kCompContainerAnimationKey = @"play";
 }
 
 - (void)_handleWillEnterBackground {
+    _completionJsonFromURL = nil;
   [self _handleWindowChanges: false];
 }
 
